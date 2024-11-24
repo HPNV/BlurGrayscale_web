@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload and Transform</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+        input[type="file"], select, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        canvas {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload and Transform Your Image</h1>
+        <form id="imageForm">
+            <label for="image">Choose an image:</label>
+            <input type="file" id="image" accept="image/*" required>
+
+            <label for="transform">Choose an option:</label>
+            <select id="transform">
+                <option value="grayscale">Grayscale</option>
+                <option value="blur">Blur</option>
+            </select>
+
+            <button type="button" id="uploadButton">Upload and Transform</button>
+        </form>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            const fileInput = document.getElementById('image');
+            const transformOption = document.getElementById('transform').value;
+
+            if (fileInput.files.length === 0) {
+                alert('Please select an image.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (event) {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.getElementById('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    const scale = 0.5;  
+                    const width = img.width * scale;
+                    const height = img.height * scale;
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    if (transformOption === 'blur') {
+                        applyBlur(ctx, width, height);
+                    } else if (transformOption === 'grayscale') {
+                        applyGrayscale(ctx, width, height);
+                    } else if (transformOption === 'sepia') {
+                        applySepia(ctx, width, height);
+                    }
+                };
+
+                img.src = event.target.result;
+            };
+
+            reader.readAsDataURL(file);
+        });
+
+        //grayscale effect
+        function applyGrayscale(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const gray = r * 0.3 + g * 0.59 + b * 0.11;
+                data[i] = data[i + 1] = data[i + 2] = gray;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        //blur effect
+        function applyBlur(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const radius = 5;
+
+            const blurredData = new Uint8ClampedArray(data);
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    let r = 0, g = 0, b = 0, count = 0;
+
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const nx = x + dx;
+                            const ny = y + dy;
+
+                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                const idx = (ny * width + nx) * 4;
+                                r += data[idx];
+                                g += data[idx + 1];
+                                b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                    }
+
+                    const idx = (y * width + x) * 4;
+                    blurredData[idx] = r / count;
+                    blurredData[idx + 1] = g / count;
+                    blurredData[idx + 2] = b / count;
+                }
+            }
+
+            const blurredImageData = new ImageData(blurredData, width, height);
+            ctx.putImageData(blurredImageData, 0, 0);
+        }
+    </script>
+</body>
+</html>
